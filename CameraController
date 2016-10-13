@@ -1,0 +1,68 @@
+using UnityEngine;
+using System.Collections;
+
+/* Tomer Braff
+ * October 12, 2016
+ * Basic forward-focus camera script. Attach this to a camera game object and assign the appropriate variables.
+*/
+public class CameraController : Monobehavior
+{
+  [Header("The target the camera will follow")]
+  public Transform target;
+  private Vector2 oldTargetPos;
+  private Vector2 targetVel;
+
+  [Header("How fast the camera moves in the X/Y direction")]
+  public float xSwitchSpeed = 10.0f;
+  public float ySwitchSpeed = 1.0f;
+
+  [Header("Viewport Variables [Bottom-Left (0,0), Top-Right (1,1)]")]
+  [Range(0, 1)] public float minX = .25f;
+  [Range(0, 1)] public float maxX = .75f;
+  [Range(0, 1)] public float minY = .25f;
+  [Range(0, 1)] public float maxY = .75f;
+
+  private Camera cam;
+
+  // Use this for initialization
+	public void Awake () 
+  {
+    // Minimum viewpoints must not be greater than their Maximum counterparts
+    if (minY > maxY || minX > maxX)
+      throw new System.Exception("MinX/MinY must be less than its Max!");
+      
+    cam = GetComponent<Camera>();
+    oldTargetPos = target.position;
+	}
+
+  public void LateUpdate()
+  {
+    MoveCamera();
+  }
+
+  public void MoveCamera()
+  {
+    // Manually get the target's current velocity from it's current position and older position last frame
+    targetVel = (target.position - oldTargetPos) / Time.deltaTime;
+    // Now make the target's older position the current one for the next frame
+    oldTargetPos = target.position;
+    
+    // Target location - Camera location
+    Vector3 dif = target.position - transform.position;
+    
+    // Corners of the buffer box in the viewport
+    Vector3 topRight = cam.ViewportToWorldPoint(new Vector3(maxX, maxY)) + dif;
+    Vector3 botLeft = cam.ViewportToWorldPoint(new Vector3(minX, minY)) + dif;
+
+    // X-offset: How fast is the target moving left/right proportional to maxSpeed? 
+    // Has Range [-1,1], convert to [0,1] using a formula I found on the internet
+    float destX = Mathf.Lerp(botLeft.x, topRight.x, ((targetVel.x / Players.RunSpeed) + 1) / 2);
+    float x = Mathf.Lerp(cam.transform.position.x, destX, xSwitchSpeed * Time.deltaTime);
+
+    // Y-offset: Is the player grounded? True: maxY, False: minY
+    float destY = c.Controller.isGrounded ? topRight.y : botLeft.y;
+    float y = Mathf.Lerp(cam.transform.position.y, destY, ySwitchSpeed * Time.deltaTime);
+
+    transform.position = new Vector3(x, y, -10f);
+  }
+}
